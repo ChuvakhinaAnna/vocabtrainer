@@ -13,10 +13,12 @@
         h1, h2, h3 { color: #2c3e50; text-align: center; }
         .hidden { display: none; }
         
-        /* Таблицы (Учебник) */
+        /* Таблицы и поиск (Учебник) */
         table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
         th { background-color: #ecf0f1; color: #2c3e50; }
+        .search-box { width: 100%; padding: 12px; margin-bottom: 20px; border: 2px solid #bdc3c7; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        .search-box:focus { border-color: #3498db; outline: none; }
         
         /* Стили тренажера слов */
         .word-display { font-size: 2em; font-weight: bold; color: #34495e; text-align: center; margin: 20px 0; padding: 20px; background: #ecf0f1; border-radius: 8px; }
@@ -60,6 +62,8 @@
     <ul id="study-devices-list" style="line-height: 1.6; margin-bottom: 40px;"></ul>
 
     <h3>Vocabulary List (90 words)</h3>
+    <input type="text" id="study-search" class="search-box" placeholder="🔍 Введите слово, синоним, антоним или перевод для поиска..." oninput="filterStudyTable()">
+    
     <table id="study-table">
         <thead>
             <tr>
@@ -105,11 +109,14 @@
             <div class="error" id="v-sent-err">Предложение должно содержать загаданное слово и состоять минимум из 10 слов.</div>
         </div>
 
-        <button id="v-check-btn" class="action-btn" onclick="checkVocabAnswer()">Проверить ответы</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="v-check-btn" class="action-btn" onclick="checkVocabAnswer()">Проверить ответы</button>
+            <button id="v-reveal-btn" class="action-btn" style="background: #e67e22;" onclick="revealVocabAnswers()">Не знаю / Показать ответы</button>
+        </div>
 
         <div class="feedback-area" id="v-feedback">
             <div>
-                <strong>Отлично! Правильно.</strong><br>
+                <strong>Результат / Подсказка:</strong><br>
                 <span><b>Перевод:</b> <span id="v-trans"></span></span><br>
                 <span><b>Объяснение:</b> <span id="v-expl"></span></span>
             </div>
@@ -288,18 +295,7 @@ function switchTab(tab) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ УЧЕБНИКА =================
 window.onload = function() {
-    // Таблица слов
-    const tbody = document.querySelector('#study-table tbody');
-    vocabDb.forEach(item => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${item.word}</strong></td>
-            <td>${item.syn}</td>
-            <td>${item.ant}</td>
-            <td><b>${item.trans}</b><br><span style="color:#7f8c8d;">${item.expl}</span></td>
-        `;
-        tbody.appendChild(tr);
-    });
+    renderStudyTable(vocabDb);
 
     // Список приемов
     const devList = document.getElementById('study-devices-list');
@@ -309,6 +305,38 @@ window.onload = function() {
         devList.appendChild(li);
     });
 };
+
+function renderStudyTable(data) {
+    const tbody = document.querySelector('#study-table tbody');
+    tbody.innerHTML = '';
+    data.forEach(item => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${item.word}</strong></td>
+            <td>${item.syn}</td>
+            <td>${item.ant}</td>
+            <td><b>${item.trans}</b><br><span style="color:#7f8c8d;">${item.expl}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Поиск по учебнику
+function filterStudyTable() {
+    const query = document.getElementById('study-search').value.toLowerCase().trim();
+    if (!query) {
+        renderStudyTable(vocabDb);
+        return;
+    }
+    const filtered = vocabDb.filter(item => 
+        item.word.toLowerCase().includes(query) ||
+        item.syn.toLowerCase().includes(query) ||
+        item.ant.toLowerCase().includes(query) ||
+        item.trans.toLowerCase().includes(query) ||
+        item.expl.toLowerCase().includes(query)
+    );
+    renderStudyTable(filtered);
+}
 
 // ================= ЛОГИКА ТРЕНАЖЕРА СЛОВ (Ввод) =================
 let v_queue = [], v_mistakes = [], v_index = 0, v_current = null, v_hasMistake = false;
@@ -342,6 +370,7 @@ function loadVocabQuestion() {
     document.getElementById('v-sent-err').style.display = 'none';
     document.getElementById('v-feedback').style.display = 'none';
     document.getElementById('v-check-btn').style.display = 'inline-block';
+    document.getElementById('v-reveal-btn').style.display = 'inline-block';
 }
 
 function checkVocabAnswer() {
@@ -375,11 +404,34 @@ function checkVocabAnswer() {
         
         ['v-syn', 'v-ant', 'v-sent'].forEach(id => document.getElementById(id).disabled = true);
         document.getElementById('v-check-btn').style.display = 'none';
+        document.getElementById('v-reveal-btn').style.display = 'none';
         
         document.getElementById('v-trans').textContent = v_current.trans;
         document.getElementById('v-expl').textContent = v_current.expl;
         document.getElementById('v-feedback').style.display = 'flex';
     }
+}
+
+// Функция для показа ответов, если не знаешь (засчитывает как ошибку)
+function revealVocabAnswers() {
+    if (!v_mistakes.includes(v_current)) {
+        v_mistakes.push(v_current);
+    }
+    
+    document.getElementById('v-syn').value = v_current.syn;
+    document.getElementById('v-syn').className = 'incorrect-input';
+    document.getElementById('v-ant').value = v_current.ant;
+    document.getElementById('v-ant').className = 'incorrect-input';
+    document.getElementById('v-sent').value = `Правильный ответ раскрыт (слово: ${v_current.word})`;
+    document.getElementById('v-sent').className = 'incorrect-input';
+
+    ['v-syn', 'v-ant', 'v-sent'].forEach(id => document.getElementById(id).disabled = true);
+    document.getElementById('v-check-btn').style.display = 'none';
+    document.getElementById('v-reveal-btn').style.display = 'none';
+
+    document.getElementById('v-trans').textContent = v_current.trans;
+    document.getElementById('v-expl').textContent = `Ответы показаны. Слово отмечено как не пройденное. ${v_current.expl}`;
+    document.getElementById('v-feedback').style.display = 'flex';
 }
 
 function nextVocabQuestion() {
@@ -394,7 +446,7 @@ function nextVocabQuestion() {
             statsEl.textContent = "Идеально! Ошибок нет."; statsEl.style.color = "#2ecc71";
             retryBtn.classList.add('hidden');
         } else {
-            statsEl.textContent = `Пройдено: ${v_queue.length}. Ошибок: ${v_mistakes.length}.`;
+            statsEl.textContent = `Пройдено: ${v_queue.length}. Слов с ошибками/подсказками: ${v_mistakes.length}.`;
             statsEl.style.color = "#e67e22";
             retryBtn.classList.remove('hidden');
         }
@@ -405,7 +457,6 @@ function nextVocabQuestion() {
 let s_queue = [], s_mistakes = [], s_index = 0, s_current = null;
 
 function startStyleTest(onlyMistakes = false) {
-    // Создаем массив вопросов (спрашиваем либо по определению, либо по примеру)
     let rawQueue = onlyMistakes ? [...s_mistakes] : stylisticsDb.map(item => ({
         term: item.term,
         isDef: Math.random() > 0.5,
@@ -413,7 +464,6 @@ function startStyleTest(onlyMistakes = false) {
         textAlt: item.ex
     }));
     
-    // Перемешиваем
     s_queue = rawQueue.sort(() => Math.random() - 0.5);
     s_mistakes = []; s_index = 0;
     
@@ -422,7 +472,6 @@ function startStyleTest(onlyMistakes = false) {
     document.getElementById('style-test-screen').classList.remove('hidden');
     document.getElementById('s-total').textContent = s_queue.length;
     
-    // Рисуем кнопки один раз
     const grid = document.getElementById('s-buttons-grid');
     grid.innerHTML = '';
     stylisticsDb.forEach(device => {
@@ -440,12 +489,10 @@ function loadStyleQuestion() {
     s_current = s_queue[s_index];
     document.getElementById('s-current').textContent = s_index + 1;
     
-    // Выбираем, что показать: определение или пример
     s_current.isDef = Math.random() > 0.5;
     document.getElementById('s-type-label').textContent = s_current.isDef ? "определению" : "примеру";
     document.getElementById('s-question').textContent = s_current.isDef ? s_current.text : `"${s_current.textAlt}"`;
     
-    // Сброс кнопок и UI
     document.querySelectorAll('.device-btn').forEach(btn => {
         btn.classList.remove('correct', 'wrong');
         btn.disabled = false;
@@ -469,12 +516,10 @@ function checkStyleAnswer(btnElement, selectedTerm) {
         fb.textContent = `Ошибка! Правильный ответ: ${s_current.term}`;
         fb.style.color = "#e74c3c";
         
-        // Подсвечиваем правильный
         document.querySelectorAll('.device-btn').forEach(b => {
             if (b.textContent === s_current.term) b.classList.add('correct');
         });
         
-        // Запоминаем оригинальный объект из stylisticsDb для повторения
         let originalItem = stylisticsDb.find(d => d.term === s_current.term);
         if (!s_mistakes.some(m => m.term === originalItem.term)) {
             s_mistakes.push({term: originalItem.term, text: originalItem.def, textAlt: originalItem.ex});
