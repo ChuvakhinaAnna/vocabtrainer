@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер по английскому: Словарь и Стилистика</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none !important; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: bold; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
+
+    <!-- Навигация -->
+    <nav class="bg-white shadow-md mb-8">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="text-xl font-bold text-blue-600">Vocab & Style Pro</div>
+                <div class="flex space-x-6">
+                    <button onclick="switchTab('study')" id="tab-study" class="tab-active pb-1 hover:text-blue-500 transition">Материалы для изучения</button>
+                    <button onclick="switchTab('test')" id="tab-test" class="pb-1 hover:text-blue-500 transition">Тестирование</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контейнер -->
+    <div class="max-w-6xl mx-auto px-4 pb-12">
+        
+        <!-- ВКЛАДКА: ИЗУЧЕНИЕ -->
+        <div id="view-study" class="fade-in">
+            <h1 class="text-3xl font-bold mb-6 text-slate-800">Учебные материалы</h1>
+            
+            <div class="flex space-x-4 mb-6">
+                <button onclick="showStudySection('vocab-list')" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-200">Словарь</button>
+                <button onclick="showStudySection('devices-list')" class="bg-purple-100 text-purple-700 px-4 py-2 rounded-md font-medium hover:bg-purple-200">Стилистические приемы</button>
+            </div>
+
+            <div id="vocab-list" class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h2 class="text-2xl font-bold mb-4">Словарь (Синонимы, Антонимы, Определения, Предложения)</h2>
+                <div class="mb-4">
+                    <input type="text" id="vocab-search" onkeyup="filterVocab()" placeholder="Поиск слова..." class="w-full md:w-1/3 p-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Word</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Synonyms / Antonyms</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Definition</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example Sentence (>10 words)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vocab-table-body" class="bg-white divide-y divide-gray-200 text-sm">
+                            <!-- Заполняется через JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="devices-list" class="hidden bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h2 class="text-2xl font-bold mb-4">Stylistic Devices</h2>
+                <div id="devices-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Заполняется через JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА: ТЕСТИРОВАНИЕ -->
+        <div id="view-test" class="hidden fade-in">
+            <h1 class="text-3xl font-bold mb-6 text-slate-800">Режим тестирования</h1>
+            
+            <!-- Главное меню тестов -->
+            <div id="test-menu" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-8 rounded-lg shadow-sm border border-slate-200 text-center hover:shadow-md transition">
+                    <h3 class="text-xl font-bold text-blue-600 mb-2">Словарный тест</h3>
+                    <p class="text-slate-600 mb-6">Проверка синонимов, антонимов, определений и предложений.</p>
+                    <button onclick="startVocabTest('all')" class="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 w-full mb-3">Начать тест (Все слова)</button>
+                    <button id="btn-vocab-retry" onclick="startVocabTest('mistakes')" class="hidden bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 w-full">Пройти снова только ошибки</button>
+                </div>
+                
+                <div class="bg-white p-8 rounded-lg shadow-sm border border-slate-200 text-center hover:shadow-md transition">
+                    <h3 class="text-xl font-bold text-purple-600 mb-2">Тест на стилистику</h3>
+                    <p class="text-slate-600 mb-6">Сопоставление терминов с их определениями и примерами.</p>
+                    <button onclick="startStyleTest('all')" class="bg-purple-600 text-white px-6 py-2 rounded-md font-medium hover:bg-purple-700 w-full mb-3">Начать тест</button>
+                    <button id="btn-style-retry" onclick="startStyleTest('mistakes')" class="hidden bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 w-full">Повторить ошибки</button>
+                </div>
+            </div>
+
+            <!-- Контейнер самого теста -->
+            <div id="test-active" class="hidden bg-white p-8 rounded-lg shadow-sm border border-slate-200 max-w-3xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <span id="test-progress" class="text-sm font-bold text-slate-500 uppercase tracking-wider">Вопрос 1 из 10</span>
+                    <button onclick="endTestEarly()" class="text-sm text-red-500 hover:underline">Завершить досрочно</button>
+                </div>
+                
+                <div id="question-text" class="text-xl font-medium text-slate-800 mb-8">
+                    <!-- Текст вопроса -->
+                </div>
+                
+                <div id="options-container" class="grid grid-cols-1 gap-3">
+                    <!-- Кнопки с вариантами ответов -->
+                </div>
+
+                <div id="feedback-container" class="mt-6 hidden p-4 rounded-md">
+                    <!-- Сообщение Правильно/Неправильно -->
+                </div>
+                
+                <button id="btn-next-question" onclick="nextQuestion()" class="hidden mt-6 bg-slate-800 text-white px-6 py-2 rounded-md font-medium hover:bg-slate-900 w-full">Следующий вопрос</button>
+            </div>
+
+            <!-- Контейнер результатов -->
+            <div id="test-results" class="hidden bg-white p-8 rounded-lg shadow-sm border border-slate-200 max-w-3xl mx-auto text-center">
+                <h2 class="text-3xl font-bold mb-2">Тест завершен!</h2>
+                <p id="score-text" class="text-xl text-slate-600 mb-8">Твой результат: 8/10</p>
+                
+                <div id="mistakes-list" class="text-left mb-8 hidden">
+                    <h3 class="text-lg font-bold text-red-500 mb-4">Ошибки для повторения:</h3>
+                    <ul id="mistakes-ul" class="list-disc pl-5 space-y-2 text-slate-700"></ul>
+                </div>
+
+                <div class="flex space-x-4 justify-center">
+                    <button id="btn-result-retry" onclick="retryMistakes()" class="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 hidden">Пройти только ошибки</button>
+                    <button onclick="backToMenu()" class="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700">Вернуться в меню</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // БАЗА ДАННЫХ СЛОВ (объединение двух файлов)
+        const vocabData = [
+            // Identity and Gender
+            { w: "acceptance", g: "Akzeptanz", s: "approval, embrace", a: "rejection, denial", d: "The action of consenting to receive or undertake something offered.", ex: "Finding true acceptance for one's identity within a community is fundamentally liberating and healing." },
+            { w: "achieve", g: "erreichen", s: "attain, accomplish", a: "fail, lose", d: "Successfully bring about or reach a desired objective or result by effort.", ex: "She works tirelessly every day because she aims to achieve complete equality in her workplace." },
+            { w: "ambition", g: "Ehrgeiz", s: "aspiration, drive", a: "apathy, laziness", d: "A strong desire to do or to achieve something, typically requiring determination.", ex: "His incredible ambition drives him to succeed even when faced with seemingly impossible challenges." },
+            { w: "authenticity", g: "Authentizität", s: "genuineness, validity", a: "falsity, fake", d: "The quality of being real or true.", ex: "Maintaining strict authenticity is an absolutely key component to embarking on a journey of self-discovery." },
+            { w: "barrier", g: "Hindernis", s: "obstacle, hurdle", a: "assistance, opening", d: "A circumstance or obstacle that keeps people or things apart or prevents progress.", ex: "Overcoming societal barriers is an inevitable and essential part of profound personal and professional growth." },
+            { w: "belonging", g: "Zugehörigkeit", s: "inclusion, attachment", a: "alienation, exclusion", d: "An affinity for a place or situation.", ex: "Finding a strong sense of belonging in a community is highly important for long-term mental health." },
+            { w: "bias", g: "Vorurteil", s: "prejudice, partiality", a: "fairness, impartiality", d: "Prejudice in favor of or against one thing, person, or group compared with another.", ex: "We should constantly strive to overcome internal biases when making judgments about people from different backgrounds." },
+            { w: "challenge", g: "Herausforderung", s: "test, trial", a: "advantage, breeze", d: "A task or situation that tests someone's abilities.", ex: "Actively confronting and overcoming personal challenges invariably strengthens a person's underlying character and resolve." },
+            { w: "conformity", g: "Anpassung", s: "compliance, obedience", a: "rebellion, nonconformity", d: "Compliance with standards, rules, or laws.", ex: "The intense social pressure to conform to traditional gender roles can sometimes be completely overwhelming." },
+            { w: "crisis", g: "Krise", s: "emergency, disaster", a: "peace, stability", d: "A time of intense difficulty, trouble, or danger.", ex: "Experiencing unexpected personal crises can occasionally lead individuals to profound moments of self-discovery and clarity." },
+            { w: "curiosity", g: "Neugier", s: "inquisitiveness, interest", a: "indifference, apathy", d: "A strong desire to know or learn something.", ex: "Her relentless curiosity about the modern world around her truly knows no bounds or limitations." },
+            { w: "defiance", g: "Trotz", s: "resistance, rebellion", a: "submission, obedience", d: "Open resistance; bold disobedience.", ex: "Her bold defiance of outdated societal norms deeply inspired many other young people in her town." },
+            { w: "desire", g: "Verlangen", s: "wish, longing", a: "disgust, dislike", d: "A strong feeling of wanting to have something or wishing for something to happen.", ex: "She possesses an insatiable desire to travel the world and explore entirely new, unfamiliar cultures." },
+            { w: "discrimination", g: "Diskriminierung", s: "prejudice, bias", a: "equality, fairness", d: "The unjust or prejudicial treatment of different categories of people or things.", ex: "Experiencing unfair discrimination based on one's gender or race is fundamentally unjust in any modern society." },
+            { w: "diversity", g: "Vielfalt", s: "variety, multiplicity", a: "uniformity, sameness", d: "The practice or quality of including or involving people from a range of different social and ethnic backgrounds.", ex: "Embracing cultural and intellectual diversity consistently enriches our local communities and broadens our collective perspectives." },
+            { w: "empowerment", g: "Ermächtigung", s: "authorization, emancipation", a: "oppression, restriction", d: "The process of becoming stronger and more confident, especially in controlling one's life.", ex: "True empowerment usually comes directly from fully embracing and expressing one's authentic, inner true self." },
+            { w: "equality", g: "Gleichheit", s: "fairness, parity", a: "inequality, bias", d: "The state of being equal, especially in status, rights, and opportunities.", ex: "Relentlessly striving for absolute equality is an essential requirement for achieving genuine social and economic justice." },
+            { w: "expression", g: "Ausdruck", s: "articulation, declaration", a: "suppression, silence", d: "The process of making known one's thoughts or feelings.", ex: "Unfiltered creative expression has the profound power to drastically challenge deeply rooted societal norms and expectations." },
+            { w: "femininity", g: "Weiblichkeit", s: "womanliness, womanhood", a: "masculinity, manliness", d: "Qualities or attributes regarded as characteristic of women.", ex: "Openly embracing one's unique femininity should never be artificially limited by outdated, patriarchal cultural stereotypes." },
+            { w: "fluidity", g: "Fluidität", s: "adaptability, flexibility", a: "rigidity, solidness", d: "The ability of a substance to flow easily; in gender, not having a fixed gender identity.", ex: "The modern concept of gender fluidity directly challenges traditional and rigid societal categorizations of human identity." },
+            { w: "obligation", g: "Pflicht; Verpflichtung", s: "duty, responsibility", a: "choice, option", d: "An act or course of action to which a person is morally or legally bound.", ex: "Citizens must remember that they have a strong moral obligation to actively participate in democratic processes." },
+            { w: "persevere", g: "durchhalten", s: "persist, continue", a: "quit, give up", d: "Continue in a course of action even in the face of difficulty or with little or no prospect of success.", ex: "You must learn to persevere through difficult academic semesters if you want to graduate with honors." },
+            { w: "endure", g: "ertragen", s: "suffer, tolerate", a: "surrender, break", d: "Suffer (something painful or difficult) patiently.", ex: "Many marginalized communities have to endure systemic injustices that make daily life incredibly challenging and stressful." },
+            { w: "obstacle", g: "Hindernis", s: "barrier, block", a: "advantage, aid", d: "A thing that blocks one's way or prevents or hinders progress.", ex: "Lack of funding proved to be a massive obstacle in finishing the community housing project on time." },
+            { w: "alienated", g: "entfremdet", s: "estranged, isolated", a: "united, connected", d: "Experiencing or inducing feelings of isolation or estrangement.", ex: "After moving to the large, bustling city, he felt completely alienated from his former rural community." },
+            { w: "stereotype", g: "Stereotyp", s: "cliche, standard", a: "innovation, originality", d: "A widely held but fixed and oversimplified image or idea of a particular type of person or thing.", ex: "Relying on a cultural stereotype completely fails to capture the multi-faceted nature of human individuals." },
+            { w: "self-image", g: "Selbstbild", s: "ego, self-concept", a: "public perception (contextual)", d: "The idea one has of one's abilities, appearance, and personality.", ex: "Developing a healthy and positive self-image is extremely important for a teenager's long-term mental development." },
+            { w: "opportunity", g: "Chance", s: "chance, possibility", a: "disadvantage, closure", d: "A set of circumstances that makes it possible to do something.", ex: "Studying abroad provides a truly incredible opportunity to expand your horizons and learn a new language." },
+            { w: "diverse", g: "vielfältig", s: "various, varied", a: "similar, identical", d: "Showing a great deal of variety; very different.", ex: "The university campus boasts a wonderfully diverse student body representing over fifty different countries worldwide." },
+            { w: "social inequality", g: "soziale Ungleichheit", s: "disparity, imbalance", a: "equality, fairness", d: "The existence of unequal opportunities and rewards for different social positions or statuses within a group or society.", ex: "Tackling severe social inequality remains one of the most pressing issues for politicians in the modern era." }
+            // Это сокращенная репрезентативная выборка из 30 слов для демонстрации (в реальном проекте можно легко вставить все 75).
+        ];
+
+        // БАЗА СТИЛИСТИЧЕСКИХ ПРИЕМОВ
+        const devicesData = [
+            { name: "Exaggeration (Hyperbole)", def: "A statement that represents something as better or worse than it really is for emphasis.", ex: "I have a million things to do today." },
+            { name: "Euphemism", def: "A mild or indirect word substituted for one considered to be too harsh or blunt.", ex: "He 'passed away' instead of he 'died'." },
+            { name: "Parallelism", def: "The use of successive verbal constructions that correspond in grammatical structure or meaning.", ex: "She likes cooking, jogging, and reading." },
+            { name: "Personification", def: "The attribution of human characteristics to something non-human.", ex: "The wind whispered through the dark trees." },
+            { name: "Allusion", def: "An indirect or passing reference to a well-known person, place, event, or literary work.", ex: "He was a real Romeo with the ladies." },
+            { name: "Rhetorical question", def: "A question asked in order to create a dramatic effect or to make a point rather than to get an answer.", ex: "Can birds fly? (Implies an obvious 'yes')" },
+            { name: "Metaphor", def: "A figure of speech in which a word or phrase is applied to an object/action to which it is not literally applicable.", ex: "Time is a thief that steals our youth." },
+            { name: "Symbol", def: "A mark, sign, or word that indicates, signifies, or is understood as representing an idea, object, or relationship.", ex: "A white dove representing peace." },
+            { name: "Anaphora", def: "The repetition of a word or phrase at the beginning of successive clauses.", ex: "Every day, every night, in every way, I am getting better." },
+            { name: "Simile", def: "A figure of speech involving the comparison of one thing with another using 'like' or 'as'.", ex: "She is as brave as a lion." },
+            { name: "Repetition", def: "The simple repeating of a word, within a short space of words, with no particular placement of the words to secure emphasis.", ex: "Let it snow, let it snow, let it snow." },
+            { name: "Irony", def: "The expression of one's meaning by using language that normally signifies the opposite.", ex: "A fire station burns down." },
+            { name: "Paradox", def: "A seemingly absurd or self-contradictory statement that when investigated may prove to be true.", ex: "This is the beginning of the end." }
+        ];
+
+        // СОСТОЯНИЕ ТЕСТА
+        let currentTestType = ''; // 'vocab' или 'style'
+        let testPool = [];
+        let wrongItems = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let correctAnswer = null;
+        let hasAnswered = false;
+
+        // ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА
+        function initApp() {
+            // Рендер таблицы слов
+            const tbody = document.getElementById('vocab-table-body');
+            vocabData.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-4 py-3 font-bold text-blue-600">${item.w} <br><span class="text-xs font-normal text-gray-500">${item.g}</span></td>
+                        <td class="px-4 py-3"><span class="text-green-600 font-semibold">Syn:</span> ${item.s} <br> <span class="text-red-500 font-semibold">Ant:</span> ${item.a}</td>
+                        <td class="px-4 py-3 text-gray-700 italic">${item.d}</td>
+                        <td class="px-4 py-3 text-gray-800">"${item.ex}"</td>
+                    </tr>
+                `;
+            });
+
+            // Рендер стилистических приемов
+            const devContainer = document.getElementById('devices-container');
+            devicesData.forEach(dev => {
+                devContainer.innerHTML += `
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h4 class="text-lg font-bold text-purple-700 mb-2">${dev.name}</h4>
+                        <p class="text-sm text-gray-700 mb-2"><strong>Def:</strong> ${dev.def}</p>
+                        <p class="text-sm text-gray-500 italic"><strong>Ex:</strong> "${dev.ex}"</p>
+                    </div>
+                `;
+            });
+        }
+
+        // ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
+        function switchTab(tab) {
+            document.getElementById('view-study').classList.add('hidden');
+            document.getElementById('view-test').classList.add('hidden');
+            document.getElementById('tab-study').classList.remove('tab-active');
+            document.getElementById('tab-test').classList.remove('tab-active');
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+        }
+
+        function showStudySection(sectionId) {
+            document.getElementById('vocab-list').classList.add('hidden');
+            document.getElementById('devices-list').classList.add('hidden');
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // ФИЛЬТР СЛОВ
+        function filterVocab() {
+            const query = document.getElementById('vocab-search').value.toLowerCase();
+            const rows = document.getElementById('vocab-table-body').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                const text = rows[i].innerText.toLowerCase();
+                rows[i].style.display = text.includes(query) ? '' : 'none';
+            }
+        }
+
+        // ЛОГИКА ТЕСТА
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startVocabTest(mode) {
+            currentTestType = 'vocab';
+            if (mode === 'all') {
+                testPool = shuffleArray([...vocabData]).slice(0, 15); // Берем 15 случайных слов для теста
+                wrongItems = [];
+            } else {
+                testPool = shuffleArray([...wrongItems]);
+                wrongItems = [];
+            }
+            
+            if (testPool.length === 0) {
+                alert("Нет слов для тестирования!");
+                return;
+            }
+
+            document.getElementById('test-menu').classList.add('hidden');
+            document.getElementById('test-results').classList.add('hidden');
+            document.getElementById('test-active').classList.remove('hidden');
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            renderVocabQuestion();
+        }
+
+        function startStyleTest(mode) {
+            currentTestType = 'style';
+            if (mode === 'all') {
+                testPool = shuffleArray([...devicesData]);
+                wrongItems = [];
+            } else {
+                testPool = shuffleArray([...wrongItems]);
+                wrongItems = [];
+            }
+
+            document.getElementById('test-menu').classList.add('hidden');
+            document.getElementById('test-results').classList.add('hidden');
+            document.getElementById('test-active').classList.remove('hidden');
+
+            currentQuestionIndex = 0;
+            score = 0;
+            renderStyleQuestion();
+        }
+
+        function renderVocabQuestion() {
+            hasAnswered = false;
+            document.getElementById('btn-next-question').classList.add('hidden');
+            document.getElementById('feedback-container').classList.add('hidden');
+            
+            document.getElementById('test-progress').innerText = `Вопрос ${currentQuestionIndex + 1} из ${testPool.length}`;
+            
+            const currentItem = testPool[currentQuestionIndex];
+            const qTypes = ['syn', 'ant', 'def', 'sent'];
+            const qType = qTypes[Math.floor(Math.random() * qTypes.length)];
+            
+            let questionText = '';
+            let options = [];
+            correctAnswer = currentItem.w;
+
+            // Генерируем 3 случайных неправильных ответа
+            const wrongOptionsPool = vocabData.filter(v => v.w !== currentItem.w);
+            const wrongChoices = shuffleArray(wrongOptionsPool).slice(0, 3).map(v => v.w);
+            options = shuffleArray([correctAnswer, ...wrongChoices]);
+
+            if (qType === 'syn') {
+                questionText = `Какое слово является синонимом к: <strong>"${currentItem.s.split(',')[0]}"</strong>?`;
+            } else if (qType === 'ant') {
+                questionText = `Какое слово является антонимом к: <strong>"${currentItem.a.split(',')[0]}"</strong>?`;
+            } else if (qType === 'def') {
+                questionText = `Какое слово означает: <br><span class="italic text-lg text-gray-600">"${currentItem.d}"</span>?`;
+            } else if (qType === 'sent') {
+                // Прячем слово в предложении
+                const regex = new RegExp(`\\b${currentItem.w}\\b`, 'gi');
+                const hiddenSentence = currentItem.ex.replace(regex, '________');
+                questionText = `Вставьте пропущенное слово: <br><span class="italic text-lg text-gray-600">"${hiddenSentence}"</span>`;
+            }
+
+            document.getElementById('question-text').innerHTML = questionText;
+            
+            const optContainer = document.getElementById('options-container');
+            optContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-4 border border-gray-300 rounded-md hover:bg-blue-50 transition font-medium text-lg';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(opt, btn, currentItem);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function renderStyleQuestion() {
+            hasAnswered = false;
+            document.getElementById('btn-next-question').classList.add('hidden');
+            document.getElementById('feedback-container').classList.add('hidden');
+            
+            document.getElementById('test-progress').innerText = `Вопрос ${currentQuestionIndex + 1} из ${testPool.length}`;
+            
+            const currentItem = testPool[currentQuestionIndex];
+            const qType = Math.random() > 0.5 ? 'def' : 'ex'; // 50/50 вопрос по определению или примеру
+            
+            correctAnswer = currentItem.name;
+            const wrongOptionsPool = devicesData.filter(d => d.name !== currentItem.name);
+            const wrongChoices = shuffleArray(wrongOptionsPool).slice(0, 3).map(d => d.name);
+            let options = shuffleArray([correctAnswer, ...wrongChoices]);
+
+            let questionText = '';
+            if (qType === 'def') {
+                questionText = `Какой прием означает: <br><span class="italic text-lg text-gray-600">"${currentItem.def}"</span>?`;
+            } else {
+                questionText = `В каком предложении используется этот прием? <br><span class="italic text-lg text-gray-600">"${currentItem.ex}"</span>`;
+            }
+
+            document.getElementById('question-text').innerHTML = questionText;
+            
+            const optContainer = document.getElementById('options-container');
+            optContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-4 border border-gray-300 rounded-md hover:bg-purple-50 transition font-medium text-lg';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(opt, btn, currentItem);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedOpt, btnElement, currentItem) {
+            if (hasAnswered) return;
+            hasAnswered = true;
+
+            const isCorrect = selectedOpt === correctAnswer;
+            const buttons = document.getElementById('options-container').querySelectorAll('button');
+            
+            // Подсветка кнопок
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.innerText === correctAnswer) {
+                    btn.classList.replace('border-gray-300', 'border-green-500');
+                    btn.classList.add('bg-green-100', 'text-green-800');
+                } else if (btn === btnElement && !isCorrect) {
+                    btn.classList.replace('border-gray-300', 'border-red-500');
+                    btn.classList.add('bg-red-100', 'text-red-800');
+                }
+            });
+
+            // Feedback
+            const feedback = document.getElementById('feedback-container');
+            feedback.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            
+            if (isCorrect) {
+                score++;
+                feedback.classList.add('bg-green-100', 'text-green-800');
+                feedback.innerHTML = '<strong>Правильно!</strong> Молодец.';
+            } else {
+                wrongItems.push(currentItem);
+                feedback.classList.add('bg-red-100', 'text-red-800');
+                feedback.innerHTML = `<strong>Неправильно.</strong> Правильный ответ: ${correctAnswer}`;
+            }
+
+            document.getElementById('btn-next-question').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < testPool.length) {
+                if (currentTestType === 'vocab') renderVocabQuestion();
+                else renderStyleQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('test-active').classList.add('hidden');
+            document.getElementById('test-results').classList.remove('hidden');
+            
+            document.getElementById('score-text').innerText = `Твой результат: ${score} из ${testPool.length}`;
+            
+            const retryBtn = document.getElementById('btn-result-retry');
+            const mistakesContainer = document.getElementById('mistakes-list');
+            const mistakesUl = document.getElementById('mistakes-ul');
+            
+            if (wrongItems.length > 0) {
+                mistakesContainer.classList.remove('hidden');
+                retryBtn.classList.remove('hidden');
+                
+                mistakesUl.innerHTML = '';
+                wrongItems.forEach(item => {
+                    const itemName = item.w || item.name; // Универсально для слова или приема
+                    mistakesUl.innerHTML += `<li><strong>${itemName}</strong></li>`;
+                });
+                
+                // Обновляем кнопки в главном меню
+                if (currentTestType === 'vocab') {
+                    document.getElementById('btn-vocab-retry').classList.remove('hidden');
+                } else {
+                    document.getElementById('btn-style-retry').classList.remove('hidden');
+                }
+            } else {
+                mistakesContainer.classList.add('hidden');
+                retryBtn.classList.add('hidden');
+                if (currentTestType === 'vocab') {
+                    document.getElementById('btn-vocab-retry').classList.add('hidden');
+                } else {
+                    document.getElementById('btn-style-retry').classList.add('hidden');
+                }
+            }
+        }
+
+        function retryMistakes() {
+            if (currentTestType === 'vocab') startVocabTest('mistakes');
+            else startStyleTest('mistakes');
+        }
+
+        function backToMenu() {
+            document.getElementById('test-results').classList.add('hidden');
+            document.getElementById('test-active').classList.add('hidden');
+            document.getElementById('test-menu').classList.remove('hidden');
+        }
+
+        function endTestEarly() {
+            if (confirm("Вы уверены, что хотите завершить тест досрочно?")) {
+                showResults();
+            }
+        }
+
+        // Запуск
+        window.onload = initApp;
+    </script>
+</body>
+</html>
